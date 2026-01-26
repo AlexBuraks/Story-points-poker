@@ -11,6 +11,7 @@ import { PokerCard } from "@/components/poker-card";
 import { ParticipantList } from "@/components/participant-list";
 import { RoomControls } from "@/components/room-controls";
 import { CopyLinkButton } from "@/components/copy-link-button";
+import { VotingGuide } from "@/components/voting-guide";
 import { Home } from "lucide-react";
 
 interface RoomPageProps {
@@ -272,32 +273,12 @@ export default function RoomPage({ params }: RoomPageProps) {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* Контролы для модератора */}
-        {isCreator && (
-          <div>
-            <RoomControls
-              roomId={roomId}
-              userId={userId}
-              revealed={room.revealed}
-              onRevealToggle={handleRevealToggle}
-              onReset={handleReset}
-              isLoading={isLoading}
-            />
-          </div>
-        )}
-
-        {/* Список участников */}
-        <ParticipantList
-          participants={room.participants}
-          revealed={room.revealed}
-          creatorId={room.creatorId}
-        />
-
         {/* Карточки для голосования */}
-        <div>
+        <div className="space-y-4">
           <h2 className="text-xl font-semibold mb-4">Your estimate</h2>
-          <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-            {VOTE_VALUES.map((value) => (
+          {/* Первый ряд: 0.5, 1, 2, 3, 5 */}
+          <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-3">
+            {VOTE_VALUES.slice(0, 5).map((value) => (
               <PokerCard
                 key={value}
                 value={value}
@@ -306,7 +287,40 @@ export default function RoomPage({ params }: RoomPageProps) {
               />
             ))}
           </div>
+          {/* Второй ряд: 8, 13, 21, ?, ☕️ */}
+          <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+            {VOTE_VALUES.slice(5).map((value) => (
+              <PokerCard
+                key={value}
+                value={value}
+                isSelected={currentUser?.vote === value}
+                onClick={() => handleVote(value)}
+              />
+            ))}
+          </div>
+          
+          {/* Подсказка по системе голосования */}
+          <VotingGuide />
         </div>
+
+        {/* Список участников с контролами */}
+        <ParticipantList
+          participants={room.participants}
+          revealed={room.revealed}
+          creatorId={room.creatorId}
+        >
+          {/* Контролы для модератора */}
+          {isCreator && (
+            <RoomControls
+              roomId={roomId}
+              userId={userId}
+              revealed={room.revealed}
+              onRevealToggle={handleRevealToggle}
+              onReset={handleReset}
+              isLoading={isLoading}
+            />
+          )}
+        </ParticipantList>
 
         {/* Ошибки */}
         {error && (
