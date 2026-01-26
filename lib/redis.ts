@@ -7,7 +7,7 @@ const ROOM_TTL = 60 * 60 * 3; // 3 часа в секундах
 const inMemoryStore: Map<string, Room> = new Map();
 
 // Проверка доступности Redis
-const isRedisAvailable = !!(process.env.STORAGE_REST_API_URL && process.env.STORAGE_REST_API_TOKEN);
+const isRedisAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 
 // Логируем режим работы
 if (typeof window === "undefined") {
