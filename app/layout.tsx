@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Story Points Poker",
+  title: "🚀 Growth team / Discovercars.com - Story Points Poker",
   description: "Simple and fast Planning Poker for teams",
 };
 

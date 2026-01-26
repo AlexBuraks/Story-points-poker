@@ -55,7 +55,7 @@ export default function Home() {
       {/* Главная карточка */}
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Story Points Poker</CardTitle>
+          <CardTitle className="text-3xl font-bold">🚀 Growth team / Discovercars.com<br/>Story Points Poker</CardTitle>
           <CardDescription>
             Simple and fast Planning Poker for teams
           </CardDescription>
