@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Room, VOTE_VALUES, VoteValue } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Optimistic UI state for voting
+  const [optimisticVote, setOptimisticVote] = useState<VoteValue | null>(null);
+
   // Получение userId из localStorage при монтировании
   useEffect(() => {
     const storedUserId = localStorage.getItem(`user_${roomId}`);
@@ -44,7 +47,7 @@ export default function RoomPage({ params }: RoomPageProps) {
     const fetchRoom = async () => {
       try {
         const response = await fetch(`/api/room/${roomId}`);
-        
+
         if (response.status === 404) {
           router.push("/");
           return;
@@ -53,6 +56,13 @@ export default function RoomPage({ params }: RoomPageProps) {
         if (response.ok) {
           const data = await response.json();
           setRoom(data);
+
+          // Синхронизируем optimistic vote с сервером
+          // Если сервер подтвердил наш голос, очищаем optimistic state
+          if (optimisticVote !== null && data.participants[userId]?.vote === optimisticVote) {
+            setOptimisticVote(null);
+          }
+
           setError(null);
         }
       } catch (error) {
@@ -64,20 +74,20 @@ export default function RoomPage({ params }: RoomPageProps) {
     // Первая загрузка
     fetchRoom();
 
-    // Polling каждые 2 секунды
-    const interval = setInterval(fetchRoom, 2000);
+    // Polling каждые 3 секунды (оптимизировано для производительности)
+    const interval = setInterval(fetchRoom, 3000);
 
     return () => clearInterval(interval);
-  }, [roomId, userId, router]);
+  }, [roomId, userId, router, optimisticVote]);
 
   // Вход в комнату
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) return;
 
     setIsJoining(true);
-    
+
     try {
       const response = await fetch(`/api/room/${roomId}/join`, {
         method: "POST",
@@ -106,12 +116,17 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   };
 
-  // Голосование
-  const handleVote = async (vote: VoteValue) => {
+  // Голосование с Optimistic UI
+  const handleVote = useCallback(async (vote: VoteValue) => {
     if (!userId) return;
 
-    setIsLoading(true);
-    
+    // Сохраняем предыдущее значение для возможного отката
+    const previousVote = optimisticVote ?? (room?.participants[userId]?.vote as VoteValue | null) ?? null;
+
+    // НЕМЕДЛЕННО обновляем UI (Optimistic Update)
+    setOptimisticVote(vote);
+
+    // Отправляем запрос в фоне
     try {
       const response = await fetch(`/api/room/${roomId}/vote`, {
         method: "POST",
@@ -120,22 +135,33 @@ export default function RoomPage({ params }: RoomPageProps) {
       });
 
       if (!response.ok) {
-        setError("Failed to vote");
+        // Откатываем изменения при ошибке
+        setOptimisticVote(previousVote);
+        setError("Failed to vote. Please try again.");
+
+        // Автоматически скрываем ошибку через 3 секунды
+        setTimeout(() => setError(null), 3000);
+      } else {
+        // Успех - polling обновит данные с сервера
+        setError(null);
       }
     } catch (error) {
       console.error("Error voting:", error);
-      setError("Failed to vote");
-    } finally {
-      setIsLoading(false);
+      // Откатываем изменения при ошибке сети
+      setOptimisticVote(previousVote);
+      setError("Network error. Please check your connection.");
+
+      // Автоматически скрываем ошибку через 3 секунды
+      setTimeout(() => setError(null), 3000);
     }
-  };
+  }, [userId, roomId, optimisticVote, room]);
 
   // Показать/скрыть результаты
   const handleRevealToggle = async () => {
     if (!userId || !room) return;
 
     setIsLoading(true);
-    
+
     try {
       const response = await fetch(`/api/room/${roomId}/reveal`, {
         method: "POST",
@@ -159,7 +185,7 @@ export default function RoomPage({ params }: RoomPageProps) {
     if (!userId) return;
 
     setIsLoading(true);
-    
+
     try {
       const response = await fetch(`/api/room/${roomId}/reset`, {
         method: "POST",
@@ -278,27 +304,35 @@ export default function RoomPage({ params }: RoomPageProps) {
           <h2 className="text-xl font-semibold mb-4">Your estimate</h2>
           {/* Первый ряд: 0.5, 1, 2, 3, 5 */}
           <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-3">
-            {VOTE_VALUES.slice(0, 5).map((value) => (
-              <PokerCard
-                key={value}
-                value={value}
-                isSelected={currentUser?.vote === value}
-                onClick={() => handleVote(value)}
-              />
-            ))}
+            {VOTE_VALUES.slice(0, 5).map((value) => {
+              // Используем optimistic vote для мгновенного отклика
+              const currentVote = optimisticVote ?? currentUser?.vote;
+              return (
+                <PokerCard
+                  key={value}
+                  value={value}
+                  isSelected={currentVote === value}
+                  onClick={() => handleVote(value)}
+                />
+              );
+            })}
           </div>
           {/* Второй ряд: 8, 13, 21, ?, ☕️ */}
           <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-            {VOTE_VALUES.slice(5).map((value) => (
-              <PokerCard
-                key={value}
-                value={value}
-                isSelected={currentUser?.vote === value}
-                onClick={() => handleVote(value)}
-              />
-            ))}
+            {VOTE_VALUES.slice(5).map((value) => {
+              // Используем optimistic vote для мгновенного отклика
+              const currentVote = optimisticVote ?? currentUser?.vote;
+              return (
+                <PokerCard
+                  key={value}
+                  value={value}
+                  isSelected={currentVote === value}
+                  onClick={() => handleVote(value)}
+                />
+              );
+            })}
           </div>
-          
+
           {/* Подсказка по системе голосования */}
           <VotingGuide />
         </div>
