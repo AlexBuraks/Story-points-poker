@@ -48,3 +48,13 @@ Make the static Story Points Guide table interactive to help users calculate the
 - Single cell select per column (toggle on/off)
 - Clicking different cell in same column: deselects previous, selects new
 - No cumulative highlighting
+
+## AI Mode Implementation
+1. [x] **State:** Add `isAiMode` (boolean) to `VotingGuide`. → DONE
+2. [x] **UI:** Add Toggle Switch in CardHeader ("I code with AI 😎🤙"). → DONE
+3. [x] **Logic:** Create mapping function/object for SP values. → DONE
+   - Normal: 1, 2, 3, 5, 8, 13, 21, 34
+   - AI Mode: 1, 1, 1, 2, 3, 5, 8, 13
+4. [x] **Render:** Display dynamic SP values in the first column based on mode. → DONE
+5. [x] **Calculation:** Ensure `suggestedSpIndex` points to the correct row, and the displayed Max SP value reflects the current mode. → DONE
+

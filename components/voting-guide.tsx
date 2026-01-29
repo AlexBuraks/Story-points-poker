@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 interface GuideRow {
@@ -34,10 +35,29 @@ const COLUMNS = [
   { key: "unknowns", label: "Unknowns" },
 ] as const;
 
+// AI Mode: Story Points mapping (shows AI deflation effect)
+const AI_MODE_SP_MAPPING: Record<string, string> = {
+  "1": "1",
+  "2": "1",
+  "3": "1",
+  "5": "2",
+  "8": "3",
+  "13": "5",
+  "21": "8",
+  "34": "13",
+};
+
 export function VotingGuide() {
   const [isOpen, setIsOpen] = useState(false);
   // Store the index of the selected level for each column (single-select per column)
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
+  // AI Mode: toggles AI-adjusted Story Points
+  const [isAiMode, setIsAiMode] = useState(false);
+
+  // Get SP value (AI Mode or Normal)
+  const getSpValue = (originalSp: string): string => {
+    return isAiMode ? AI_MODE_SP_MAPPING[originalSp] : originalSp;
+  };
 
   // Single-select logic: clicking a cell selects ONLY that cell in the column
   const handleCellClick = (columnKey: string, rowIndex: number) => {
@@ -74,7 +94,7 @@ export function VotingGuide() {
             Story Points Guide
             {suggestedSpIndex !== -1 && !isOpen && (
               <span className="text-sm font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                Suggested: {GUIDE_DATA[suggestedSpIndex].sp} SP
+                Suggested: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
               </span>
             )}
           </CardTitle>
@@ -86,6 +106,24 @@ export function VotingGuide() {
 
       {isOpen && (
         <CardContent className="pt-0 pb-4 px-4">
+          {/* AI Mode Toggle */}
+          <div
+            className="flex items-center gap-2 text-sm mb-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Switch
+              id="ai-mode-toggle"
+              checked={isAiMode}
+              onCheckedChange={setIsAiMode}
+            />
+            <label
+              htmlFor="ai-mode-toggle"
+              className="cursor-pointer select-none"
+            >
+              I will code with AI 😎🤙
+            </label>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
@@ -121,7 +159,7 @@ export function VotingGuide() {
                             : "bg-transparent text-foreground"
                         )}
                       >
-                        {row.sp}
+                        {getSpValue(row.sp)}
                       </td>
 
                       {/* INPUT COLUMNS (Effort, Deps, Risk, Known, Unknowns) - INTERACTIVE */}
@@ -156,7 +194,7 @@ export function VotingGuide() {
                 })}
                 {/* Break it down row */}
                 <tr className="bg-red-500/20 border-b">
-                  <td className="p-2 font-medium border-r text-center">34</td>
+                  <td className="p-2 font-medium border-r text-center">{getSpValue("34")}</td>
                   <td className="p-2 text-red-600 font-medium text-center" colSpan={COLUMNS.length}>
                     🧨 Break it down!
                   </td>
@@ -172,7 +210,7 @@ export function VotingGuide() {
             </div>
             {suggestedSpIndex !== -1 && (
               <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-2 rounded-md font-medium border border-green-500/20">
-                Max Complexity: {GUIDE_DATA[suggestedSpIndex].sp} SP
+                Max Complexity: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
               </div>
             )}
           </div>
