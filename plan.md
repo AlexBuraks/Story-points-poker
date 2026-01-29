@@ -58,3 +58,10 @@ Make the static Story Points Guide table interactive to help users calculate the
 4. [x] **Render:** Display dynamic SP values in the first column based on mode. → DONE
 5. [x] **Calculation:** Ensure `suggestedSpIndex` points to the correct row, and the displayed Max SP value reflects the current mode. → DONE
 
+## Visual Polish & Tweaks
+1. [x] **Table Headers:** Center align all column headers.
+2. [x] **Legend:** Remove "? - Need more information" and "☕️ - Need a break" text.
+3. [x] **Score Display:**
+   - Change text to "Your score: X SP".
+   - Increase font size.
+   - Center align in the footer.

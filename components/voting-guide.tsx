@@ -128,9 +128,9 @@ export function VotingGuide() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2 font-medium border-r w-16">Story Points</th>
+                  <th className="text-center p-2 font-medium border-r w-16">Story Points</th>
                   {COLUMNS.map(col => (
-                    <th key={col.key} className="text-left p-2 font-medium border-r min-w-[100px]">
+                    <th key={col.key} className="text-center p-2 font-medium border-r min-w-[100px]">
                       {col.label}
                     </th>
                   ))}
@@ -203,14 +203,10 @@ export function VotingGuide() {
             </table>
           </div>
 
-          <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-muted-foreground">
-            <div className="space-y-1">
-              <p><strong>?</strong> - Need more information</p>
-              <p><strong>☕️</strong> - Need a break</p>
-            </div>
+          <div className="mt-4 flex justify-center items-center text-sm text-muted-foreground p-2">
             {suggestedSpIndex !== -1 && (
-              <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-2 rounded-md font-medium border border-green-500/20">
-                Max Complexity: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
+              <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-6 py-3 rounded-md font-bold text-lg border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
+                Your score: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
               </div>
             )}
           </div>
