@@ -67,6 +67,32 @@
 - Активная карточка подсвечивается
 - После выбора сразу отправляется голос
 
+**Interactive Guide (Таблица-подсказка):**
+- Интерактивная таблица с критериями (Effort, Deps, Risk, Known, Unknowns)
+
+**Interaction Logic (Single Select):**
+- Клик по ячейке: выбирает ТОЛЬКО эту ячейку в колонке
+- Повторный клик: снимает выбор (toggle)
+- Клик на другую ячейку в той же колонке: переключает выбор (deselect prev, select new)
+- НЕТ cumulative highlighting (ячейки выше НЕ подсвечиваются)
+
+**Visual States (Строго 2 цвета для Input Cells):**
+- **Default:** `bg-transparent text-foreground` — ячейка показывает базовый цвет строки (amber/red tint)
+- **Selected:** `bg-primary text-primary-foreground` — subtle inset shadow если нужна глубина
+- **Hover:** `hover:bg-black/5` для UX
+
+**Result Column (Story Points — первая колонка):**
+- READ-ONLY (не кликабельна)
+- Логика: Max SP = максимальный индекс из всех выбранных колонок
+- Visual: подсветка результата **ЗЕЛЕНЫМ** (`bg-green-500 text-white`) для четкого разделения "Input" vs "Output"
+- Все остальные SP ячейки остаются transparent/default
+
+**Layout Stability (CRITICAL):**
+- ❌ НИКОГДА не использовать: `font-bold`, `scale`, `transform`, изменение border-width
+- ✅ Только: `font-medium` (или без изменений font), `bg-*`, `text-*`, `shadow-inner/ring-inset`
+- Таблица должна быть "solid" — только цвета меняются, размеры фиксированы
+
+
 **Контролы (только для создателя комнаты):**
 - Кнопка "Show estimates" / "Hide estimates" (toggle, одна кнопка меняет текст)
   - По дефолту: "Show estimates"

@@ -1,114 +1,180 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-// Компонент с подсказкой по системе голосования
+interface GuideRow {
+  sp: string;
+  effort: string;
+  deps: string;
+  risk: string;
+  known: string;
+  unknowns: string;
+  colorClass: string;
+}
+
+const GUIDE_DATA: GuideRow[] = [
+  { sp: "1", effort: "Less than 2h", deps: "-", risk: "-", known: "Everything", unknowns: "-", colorClass: "bg-amber-500/20" },
+  { sp: "2", effort: "Half a day", deps: "Could be", risk: "-", known: "Everything", unknowns: "-", colorClass: "bg-amber-500/20" },
+  { sp: "3", effort: "Up to 2 days", deps: "Some", risk: "Little", known: "Almost everything", unknowns: "Could be", colorClass: "bg-amber-500/20" },
+  { sp: "5", effort: "Few days", deps: "Many", risk: "Some", known: "Most", unknowns: "Some", colorClass: "bg-amber-500/20" },
+  { sp: "8", effort: "Around a week", deps: "A lot", risk: "Much", known: "Something", unknowns: "Many", colorClass: "bg-amber-500/20" },
+  { sp: "13", effort: "More than a week", deps: "Too much", risk: "A lot", known: "Almost nothing", unknowns: "Too much", colorClass: "bg-red-500/20" },
+  { sp: "21", effort: "More than 2 weeks", deps: "Way too much", risk: "Way too much", known: "Nothing", unknowns: "Way too much", colorClass: "bg-red-500/20" },
+];
+
+const COLUMNS = [
+  { key: "effort", label: "Effort" },
+  { key: "deps", label: "Deps" },
+  { key: "risk", label: "Risk" },
+  { key: "known", label: "Known" },
+  { key: "unknowns", label: "Unknowns" },
+] as const;
+
 export function VotingGuide() {
   const [isOpen, setIsOpen] = useState(false);
+  // Store the index of the selected level for each column (single-select per column)
+  const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
+
+  // Single-select logic: clicking a cell selects ONLY that cell in the column
+  const handleCellClick = (columnKey: string, rowIndex: number) => {
+    setSelectedLevels(prev => {
+      const current = prev[columnKey];
+      // Toggle off if clicking the same cell
+      if (current === rowIndex) {
+        const newState = { ...prev };
+        delete newState[columnKey];
+        return newState;
+      }
+      // Otherwise, select the new cell (deselect previous automatically)
+      return { ...prev, [columnKey]: rowIndex };
+    });
+  };
+
+  // Calculate the max SP based on selected levels (Max Score logic)
+  const suggestedSpIndex = useMemo(() => {
+    const indices = Object.values(selectedLevels);
+    if (indices.length === 0) return -1;
+    return Math.max(...indices);
+  }, [selectedLevels]);
+
+  const toggleOpen = () => setIsOpen(!isOpen);
 
   return (
     <Card className="border-2 border-muted">
-      <CardHeader 
+      <CardHeader
         className="cursor-pointer hover:bg-muted/50 transition-colors p-4"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
       >
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Story Points Guide</CardTitle>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            {isOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
+          <CardTitle className="text-lg flex items-center gap-2">
+            Story Points Guide
+            {suggestedSpIndex !== -1 && !isOpen && (
+              <span className="text-sm font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                Suggested: {GUIDE_DATA[suggestedSpIndex].sp} SP
+              </span>
             )}
+          </CardTitle>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </div>
       </CardHeader>
-      
+
       {isOpen && (
         <CardContent className="pt-0 pb-4 px-4">
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2 font-semibold border-r">Story Points</th>
-                  <th className="text-left p-2 font-semibold border-r">Effort</th>
-                  <th className="text-left p-2 font-semibold border-r">Deps</th>
-                  <th className="text-left p-2 font-semibold border-r">Risk</th>
-                  <th className="text-left p-2 font-semibold border-r">Known</th>
-                  <th className="text-left p-2 font-semibold">Unknowns</th>
+                  <th className="text-left p-2 font-medium border-r w-16">Story Points</th>
+                  {COLUMNS.map(col => (
+                    <th key={col.key} className="text-left p-2 font-medium border-r min-w-[100px]">
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b bg-amber-500/20">
-                  <td className="p-2 font-bold border-r">1</td>
-                  <td className="p-2 border-r">Less than 2h</td>
-                  <td className="p-2 border-r">-</td>
-                  <td className="p-2 border-r">-</td>
-                  <td className="p-2 border-r">Everything</td>
-                  <td className="p-2">-</td>
-                </tr>
-                <tr className="border-b bg-amber-500/20">
-                  <td className="p-2 font-bold border-r">2</td>
-                  <td className="p-2 border-r">Half a day</td>
-                  <td className="p-2 border-r">Could be</td>
-                  <td className="p-2 border-r">-</td>
-                  <td className="p-2 border-r">Everything</td>
-                  <td className="p-2">-</td>
-                </tr>
-                <tr className="border-b bg-amber-500/20">
-                  <td className="p-2 font-bold border-r">3</td>
-                  <td className="p-2 border-r">Up to 2 days</td>
-                  <td className="p-2 border-r">Some</td>
-                  <td className="p-2 border-r">Little</td>
-                  <td className="p-2 border-r">Almost everything</td>
-                  <td className="p-2">Could be</td>
-                </tr>
-                <tr className="border-b bg-amber-500/20">
-                  <td className="p-2 font-bold border-r">5</td>
-                  <td className="p-2 border-r">Few days</td>
-                  <td className="p-2 border-r">Many</td>
-                  <td className="p-2 border-r">Some</td>
-                  <td className="p-2 border-r">Most</td>
-                  <td className="p-2">Some</td>
-                </tr>
-                <tr className="border-b bg-amber-500/20">
-                  <td className="p-2 font-bold border-r">8</td>
-                  <td className="p-2 border-r">Around a week</td>
-                  <td className="p-2 border-r">A lot</td>
-                  <td className="p-2 border-r">Much</td>
-                  <td className="p-2 border-r">Something</td>
-                  <td className="p-2">Many</td>
-                </tr>
-                <tr className="border-b bg-red-500/20">
-                  <td className="p-2 font-bold border-r">13</td>
-                  <td className="p-2 border-r">More than a week</td>
-                  <td className="p-2 border-r">Too much</td>
-                  <td className="p-2 border-r">A lot</td>
-                  <td className="p-2 border-r">Almost nothing</td>
-                  <td className="p-2">Too much</td>
-                </tr>
-                <tr className="border-b bg-red-500/20">
-                  <td className="p-2 font-bold border-r">21</td>
-                  <td className="p-2 border-r">More than 2 weeks</td>
-                  <td className="p-2 border-r">Way too much</td>
-                  <td className="p-2 border-r">Way too much</td>
-                  <td className="p-2 border-r">Nothing</td>
-                  <td className="p-2">Way too much</td>
-                </tr>
-                <tr className="bg-red-500/20">
-                  <td className="p-2 font-bold border-r">34</td>
-                  <td className="p-2 text-red-600 font-semibold" colSpan={5}>🧨 Break it down!</td>
+                {GUIDE_DATA.map((row, rowIndex) => {
+                  const isResultRow = rowIndex === suggestedSpIndex;
+
+                  return (
+                    <tr
+                      key={row.sp}
+                      className={cn(
+                        "border-b",
+                        // Base background color for the row (amber/red tint)
+                        row.colorClass
+                      )}
+                    >
+                      {/* RESULT COLUMN (Story Points) - READ-ONLY */}
+                      <td
+                        className={cn(
+                          "p-2 font-medium border-r text-center transition-colors",
+                          // GREEN highlight for max SP (Output), transparent for others
+                          isResultRow
+                            ? "bg-green-500 text-white shadow-inner"
+                            : "bg-transparent text-foreground"
+                        )}
+                      >
+                        {row.sp}
+                      </td>
+
+                      {/* INPUT COLUMNS (Effort, Deps, Risk, Known, Unknowns) - INTERACTIVE */}
+                      {COLUMNS.map(col => {
+                        const selectedIndex = selectedLevels[col.key];
+                        // Single-select: only exact match is selected
+                        const isSelected = selectedIndex === rowIndex;
+
+                        return (
+                          <td
+                            key={col.key}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCellClick(col.key, rowIndex);
+                            }}
+                            className={cn(
+                              "p-2 border-r cursor-pointer transition-colors text-center",
+                              // STRICT 2-STATE SYSTEM:
+                              // State 1 (Default): bg-transparent (shows row color)
+                              // State 2 (Selected): bg-primary text-primary-foreground
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-inner"
+                                : "bg-transparent text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                            )}
+                          >
+                            {row[col.key as keyof GuideRow]}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+                {/* Break it down row */}
+                <tr className="bg-red-500/20 border-b">
+                  <td className="p-2 font-medium border-r text-center">34</td>
+                  <td className="p-2 text-red-600 font-medium text-center" colSpan={COLUMNS.length}>
+                    🧨 Break it down!
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          
-          <div className="mt-4 text-sm text-muted-foreground space-y-1">
-            <p><strong>?</strong> - Need more information to estimate</p>
-            <p><strong>☕️</strong> - Need a break</p>
+
+          <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm text-muted-foreground">
+            <div className="space-y-1">
+              <p><strong>?</strong> - Need more information</p>
+              <p><strong>☕️</strong> - Need a break</p>
+            </div>
+            {suggestedSpIndex !== -1 && (
+              <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-2 rounded-md font-medium border border-green-500/20">
+                Max Complexity: {GUIDE_DATA[suggestedSpIndex].sp} SP
+              </div>
+            )}
           </div>
         </CardContent>
       )}
