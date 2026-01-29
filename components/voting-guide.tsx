@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,11 @@ const AI_MODE_SP_MAPPING: Record<string, string> = {
   "34": "13",
 };
 
-export function VotingGuide() {
+interface VotingGuideProps {
+  onVote?: (vote: string) => void;
+}
+
+export function VotingGuide({ onVote }: VotingGuideProps) {
   const [isOpen, setIsOpen] = useState(false);
   // Store the index of the selected level for each column (single-select per column)
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
@@ -74,12 +78,23 @@ export function VotingGuide() {
     });
   };
 
-  // Calculate the max SP based on selected levels (Max Score logic)
   const suggestedSpIndex = useMemo(() => {
     const indices = Object.values(selectedLevels);
     if (indices.length === 0) return -1;
     return Math.max(...indices);
   }, [selectedLevels]);
+
+  // Handle auto-voting when suggested SP changes
+  const suggestedSpValue = useMemo(() => {
+    if (suggestedSpIndex === -1) return null;
+    return getSpValue(GUIDE_DATA[suggestedSpIndex].sp);
+  }, [suggestedSpIndex, isAiMode]);
+
+  useEffect(() => {
+    if (suggestedSpValue && onVote) {
+      onVote(suggestedSpValue);
+    }
+  }, [suggestedSpValue, onVote]);
 
   const toggleOpen = () => setIsOpen(!isOpen);
 

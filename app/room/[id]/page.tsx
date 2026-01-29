@@ -334,7 +334,7 @@ export default function RoomPage({ params }: RoomPageProps) {
           </div>
 
           {/* Подсказка по системе голосования */}
-          <VotingGuide />
+          <VotingGuide onVote={(vote) => handleVote(vote as VoteValue)} />
         </div>
 
         {/* Список участников с контролами */}
