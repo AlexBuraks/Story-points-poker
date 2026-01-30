@@ -48,7 +48,7 @@ const AI_MODE_SP_MAPPING: Record<string, string> = {
 };
 
 interface VotingGuideProps {
-  onVote?: (vote: string) => void;
+  onVote?: (vote: string | null) => void; // Supports null for vote deselection
   resetTrigger?: number; // Incremented to trigger reset of selections
 }
 
