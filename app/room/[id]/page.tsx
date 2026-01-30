@@ -66,10 +66,10 @@ export default function RoomPage({ params }: RoomPageProps) {
           // Синхронизируем optimistic vote с сервером
           const serverVote = data.participants[userId]?.vote;
 
-          // Очищаем optimisticVote если:
-          // 1. Сервер подтвердил наш голос (serverVote === optimisticVote)
-          // 2. На сервере голос стал null — новый раунд (serverVote === null)
-          if (optimisticVote !== null && (serverVote === optimisticVote || serverVote === null)) {
+          // Очищаем optimisticVote ТОЛЬКО если сервер подтвердил наш голос
+          // (serverVote === optimisticVote). 
+          // Убрали serverVote === null, чтобы избежать race condition при голосовании.
+          if (optimisticVote !== null && serverVote === optimisticVote) {
             setOptimisticVote(null);
           }
 
@@ -90,19 +90,31 @@ export default function RoomPage({ params }: RoomPageProps) {
     return () => clearInterval(interval);
   }, [roomId, userId, router, optimisticVote]);
 
-  // Auto-reset VotingGuide when new round starts (vote becomes null)
+  // Track previous revealed state to detect explicit room reset (true -> false)
+  const previousRevealedRef = useRef<boolean | undefined>(undefined);
+
+  // Auto-reset VotingGuide when new round starts (explicit reset or manual vote null)
   useEffect(() => {
     if (!userId || !room) return;
 
     const currentVote = optimisticVote ?? room.participants[userId]?.vote;
+    const isRevealed = room.revealed;
 
-    // Detect transition from non-null to null (new round started)
-    if (previousVoteRef.current !== undefined && previousVoteRef.current !== null && currentVote === null) {
+    // Detect explicit room reset (moderator clicked "Delete estimates")
+    // This happens when revealed changes from true to false
+    const isExplicitReset = previousRevealedRef.current === true && isRevealed === false;
+
+    // Detect transition to null vote (new round started on server)
+    const isNewRoundOnServer = previousVoteRef.current !== undefined && previousVoteRef.current !== null && currentVote === null;
+
+    if (isExplicitReset || isNewRoundOnServer) {
+      setOptimisticVote(null); // Force clear optimistic state on reset
       setGuideResetKey(prev => prev + 1);
     }
 
-    // Update previous vote
+    // Update refs
     previousVoteRef.current = currentVote;
+    previousRevealedRef.current = isRevealed;
   }, [userId, room, optimisticVote]);
 
   // Вход в комнату
