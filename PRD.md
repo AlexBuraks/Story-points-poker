@@ -58,10 +58,16 @@
 - ✅ Корректная обработка всех 7 сценариев (Use Cases)
 - ✅ Защита от "залипания" optimisticVote при поллинге
 
+## Оптимизация производительности (Lag Reduction)
+**Проблема:** При нажатии "Show/Hide estimates" или "Delete estimates" модератор видит задержку, так как UI ждет ответа от API и следующего цикла поллинга.
+**Цель:** Внедрить Optimistic UI для всех действий модератора.
+
+1.  **Show/Hide Toggle:** Состояние `room.revealed` должно меняться мгновенно в локальном стейте, не дожидаясь ответа сервера.
+2.  **Delete Estimates:** Состояние комнаты должно мгновенно сбрасываться локально (все голоса в `null`, `revealed: false`).
+3.  **Loading States:** Минимизировать использование блокирующих лоадеров (`isLoading`), которые делают UI "тяжелым".
+
 **Технические детали:**
 - VotingGuide (components/voting-guide.tsx:106-112): `useEffect` отправляет `onVote(null)` при очистке таблицы
 - Room Page (app/room/[id]/page.tsx:145): `handleVote` принимает `VoteValue | null`
 - Room Page (app/room/[id]/page.tsx:339-370): Повторный клик на карту вызывает `handleVote(null, true)` (toggle)
 - Room Page (app/room/[id]/page.tsx:72-73): Поллинг очищает `optimisticVote` при `serverVote === null`
-
-

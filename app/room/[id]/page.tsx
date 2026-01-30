@@ -186,9 +186,15 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   }, [userId, roomId, optimisticVote, room]);
 
-  // Показать/скрыть результаты
+  // Показать/скрыть результаты (with Optimistic UI)
   const handleRevealToggle = async () => {
     if (!userId || !room) return;
+
+    // Сохраняем предыдущее состояние для возможного отката
+    const previousRevealed = room.revealed;
+
+    // НЕМЕДЛЕННО обновляем UI (Optimistic Update)
+    setRoom(prev => prev ? { ...prev, revealed: !prev.revealed } : null);
 
     setIsLoading(true);
 
@@ -196,29 +202,53 @@ export default function RoomPage({ params }: RoomPageProps) {
       const response = await fetch(`/api/room/${roomId}/reveal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, revealed: !room.revealed }),
+        body: JSON.stringify({ userId, revealed: !previousRevealed }),
       });
 
       if (!response.ok) {
-        setError("Failed to toggle reveal");
+        // Откатываем изменения при ошибке
+        setRoom(prev => prev ? { ...prev, revealed: previousRevealed } : null);
+        setError("Failed to toggle reveal. Please try again.");
+
+        // Автоматически скрываем ошибку через 3 секунды
+        setTimeout(() => setError(null), 3000);
       }
     } catch (error) {
       console.error("Error toggling reveal:", error);
-      setError("Failed to toggle reveal");
+      // Откатываем изменения при ошибке сети
+      setRoom(prev => prev ? { ...prev, revealed: previousRevealed } : null);
+      setError("Network error. Please check your connection.");
+
+      // Автоматически скрываем ошибку через 3 секунды
+      setTimeout(() => setError(null), 3000);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Сброс голосов
+  // Сброс голосов (with Optimistic UI)
   const handleReset = async () => {
-    if (!userId) return;
+    if (!userId || !room) return;
 
-    setIsLoading(true);
+    // Сохраняем предыдущее состояние для возможного отката
+    const previousRoom = { ...room };
+    const previousOptimisticVote = optimisticVote;
+
+    // НЕМЕДЛЕННО обновляем UI (Optimistic Update)
+    setRoom(prev => {
+      if (!prev) return null;
+      const newParticipants = { ...prev.participants };
+      Object.keys(newParticipants).forEach(uid => {
+        newParticipants[uid] = { ...newParticipants[uid], vote: null };
+      });
+      return { ...prev, revealed: false, participants: newParticipants };
+    });
 
     // Immediately reset optimistic vote and guide (don't wait for polling)
     setOptimisticVote(null);
     setGuideResetKey(prev => prev + 1);
+
+    setIsLoading(true);
 
     try {
       const response = await fetch(`/api/room/${roomId}/reset`, {
@@ -228,11 +258,23 @@ export default function RoomPage({ params }: RoomPageProps) {
       });
 
       if (!response.ok) {
-        setError("Failed to reset votes");
+        // Откатываем изменения при ошибке
+        setRoom(previousRoom);
+        setOptimisticVote(previousOptimisticVote);
+        setError("Failed to reset votes. Please try again.");
+
+        // Автоматически скрываем ошибку через 3 секунды
+        setTimeout(() => setError(null), 3000);
       }
     } catch (error) {
       console.error("Error resetting votes:", error);
-      setError("Failed to reset votes");
+      // Откатываем изменения при ошибке сети
+      setRoom(previousRoom);
+      setOptimisticVote(previousOptimisticVote);
+      setError("Network error. Please check your connection.");
+
+      // Автоматически скрываем ошибку через 3 секунды
+      setTimeout(() => setError(null), 3000);
     } finally {
       setIsLoading(false);
     }
