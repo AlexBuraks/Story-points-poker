@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, useCallback, useMemo } from "react";
+import { use, useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Room, VOTE_VALUES, VoteValue } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,12 @@ export default function RoomPage({ params }: RoomPageProps) {
   // Optimistic UI state for voting
   const [optimisticVote, setOptimisticVote] = useState<VoteValue | null>(null);
 
+  // Reset trigger for VotingGuide (incremented to clear selections)
+  const [guideResetKey, setGuideResetKey] = useState(0);
+
+  // Track previous vote to detect when it changes to null (new round)
+  const previousVoteRef = useRef<VoteValue | string | null | undefined>(undefined);
+
   // Получение userId из localStorage при монтировании
   useEffect(() => {
     const storedUserId = localStorage.getItem(`user_${roomId}`);
@@ -58,8 +64,12 @@ export default function RoomPage({ params }: RoomPageProps) {
           setRoom(data);
 
           // Синхронизируем optimistic vote с сервером
-          // Если сервер подтвердил наш голос, очищаем optimistic state
-          if (optimisticVote !== null && data.participants[userId]?.vote === optimisticVote) {
+          const serverVote = data.participants[userId]?.vote;
+
+          // Очищаем optimisticVote если:
+          // 1. Сервер подтвердил наш голос (serverVote === optimisticVote)
+          // 2. На сервере голос стал null — новый раунд (serverVote === null)
+          if (optimisticVote !== null && (serverVote === optimisticVote || serverVote === null)) {
             setOptimisticVote(null);
           }
 
@@ -79,6 +89,21 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     return () => clearInterval(interval);
   }, [roomId, userId, router, optimisticVote]);
+
+  // Auto-reset VotingGuide when new round starts (vote becomes null)
+  useEffect(() => {
+    if (!userId || !room) return;
+
+    const currentVote = optimisticVote ?? room.participants[userId]?.vote;
+
+    // Detect transition from non-null to null (new round started)
+    if (previousVoteRef.current !== undefined && previousVoteRef.current !== null && currentVote === null) {
+      setGuideResetKey(prev => prev + 1);
+    }
+
+    // Update previous vote
+    previousVoteRef.current = currentVote;
+  }, [userId, room, optimisticVote]);
 
   // Вход в комнату
   const handleJoin = async (e: React.FormEvent) => {
@@ -116,8 +141,8 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   };
 
-  // Голосование с Optimistic UI
-  const handleVote = useCallback(async (vote: VoteValue) => {
+  // Голосование с Optimistic UI (supports null for vote deselection)
+  const handleVote = useCallback(async (vote: VoteValue | null, fromManualClick = false) => {
     if (!userId) return;
 
     // Сохраняем предыдущее значение для возможного отката
@@ -125,6 +150,11 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     // НЕМЕДЛЕННО обновляем UI (Optimistic Update)
     setOptimisticVote(vote);
+
+    // If this was a manual click on PokerCard, reset the guide selections
+    if (fromManualClick) {
+      setGuideResetKey(prev => prev + 1);
+    }
 
     // Отправляем запрос в фоне
     try {
@@ -185,6 +215,10 @@ export default function RoomPage({ params }: RoomPageProps) {
     if (!userId) return;
 
     setIsLoading(true);
+
+    // Immediately reset optimistic vote and guide (don't wait for polling)
+    setOptimisticVote(null);
+    setGuideResetKey(prev => prev + 1);
 
     try {
       const response = await fetch(`/api/room/${roomId}/reset`, {
@@ -312,7 +346,14 @@ export default function RoomPage({ params }: RoomPageProps) {
                   key={value}
                   value={value}
                   isSelected={currentVote === value}
-                  onClick={() => handleVote(value)}
+                  onClick={() => {
+                    // Toggle: if already selected, deselect (vote null)
+                    if (currentVote === value) {
+                      handleVote(null, true);
+                    } else {
+                      handleVote(value, true);
+                    }
+                  }}
                 />
               );
             })}
@@ -327,14 +368,24 @@ export default function RoomPage({ params }: RoomPageProps) {
                   key={value}
                   value={value}
                   isSelected={currentVote === value}
-                  onClick={() => handleVote(value)}
+                  onClick={() => {
+                    // Toggle: if already selected, deselect (vote null)
+                    if (currentVote === value) {
+                      handleVote(null, true);
+                    } else {
+                      handleVote(value, true);
+                    }
+                  }}
                 />
               );
             })}
           </div>
 
           {/* Подсказка по системе голосования */}
-          <VotingGuide onVote={(vote) => handleVote(vote as VoteValue)} />
+          <VotingGuide
+            onVote={(vote) => handleVote(vote as VoteValue, false)}
+            resetTrigger={guideResetKey}
+          />
         </div>
 
         {/* Список участников с контролами */}

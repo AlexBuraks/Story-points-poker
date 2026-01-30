@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,14 +49,27 @@ const AI_MODE_SP_MAPPING: Record<string, string> = {
 
 interface VotingGuideProps {
   onVote?: (vote: string) => void;
+  resetTrigger?: number; // Incremented to trigger reset of selections
 }
 
-export function VotingGuide({ onVote }: VotingGuideProps) {
+export function VotingGuide({ onVote, resetTrigger }: VotingGuideProps) {
   const [isOpen, setIsOpen] = useState(false);
   // Store the index of the selected level for each column (single-select per column)
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
   // AI Mode: toggles AI-adjusted Story Points
   const [isAiMode, setIsAiMode] = useState(false);
+
+  // Track last voted value to prevent duplicate votes
+  // Use undefined for "not initialized yet" vs null for "cleared after selection"
+  const lastVotedValueRef = useRef<string | null | undefined>(undefined);
+
+  // Reset selections when resetTrigger changes (preserve AI Mode setting)
+  useEffect(() => {
+    if (resetTrigger !== undefined && resetTrigger > 0) {
+      setSelectedLevels({});
+      // Don't clear lastVotedValueRef - let the auto-vote effect handle the null transition
+    }
+  }, [resetTrigger]);
 
   // Get SP value (AI Mode or Normal)
   const getSpValue = (originalSp: string): string => {
@@ -90,9 +103,14 @@ export function VotingGuide({ onVote }: VotingGuideProps) {
     return getSpValue(GUIDE_DATA[suggestedSpIndex].sp);
   }, [suggestedSpIndex, isAiMode]);
 
+  // Auto-vote when suggested value changes (including null for deselection)
   useEffect(() => {
-    if (suggestedSpValue && onVote) {
-      onVote(suggestedSpValue);
+    if (suggestedSpValue !== lastVotedValueRef.current && onVote) {
+      // Skip only the very first render (undefined = not initialized)
+      if (lastVotedValueRef.current !== undefined) {
+        onVote(suggestedSpValue);
+      }
+      lastVotedValueRef.current = suggestedSpValue;
     }
   }, [suggestedSpValue, onVote]);
 
