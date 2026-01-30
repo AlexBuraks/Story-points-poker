@@ -71,3 +71,15 @@
 - Room Page (app/room/[id]/page.tsx:145): `handleVote` принимает `VoteValue | null`
 - Room Page (app/room/[id]/page.tsx:339-370): Повторный клик на карту вызывает `handleVote(null, true)` (toggle)
 - Room Page (app/room/[id]/page.tsx:72-73): Поллинг очищает `optimisticVote` при `serverVote === null`
+
+## Open Source Release (v1.2)
+
+### Цели
+1.  **Публичность:** Сделать репозиторий доступным для всех (Public).
+2.  **Безопасность:** Гарантировать отсутствие секретов в коде.
+3.  **Документация:** Подготовить README и LICENSE для внешних пользователей.
+
+### Требования
+- Аудит на наличие hardcoded токенов или путей.
+- Наличие MIT License.
+- Инструкция по установке в README.
