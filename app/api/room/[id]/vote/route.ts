@@ -10,7 +10,10 @@ export async function POST(
   try {
     const { id: roomId } = await params;
     const body = await request.json();
-    const { userId, vote } = body;
+    const { userId, vote, status: rawStatus } = body;
+
+    // Нормализуем статус: если не передан или некорректный, используем 'voted'
+    const status = (rawStatus === 'voted' || rawStatus === 'thinking') ? rawStatus : 'voted';
 
     if (!userId || typeof userId !== "string") {
       return NextResponse.json(
@@ -19,7 +22,8 @@ export async function POST(
       );
     }
 
-    if (!vote || !VOTE_VALUES.includes(vote)) {
+    // Разрешаем vote: null для сброса голоса
+    if (vote !== null && !VOTE_VALUES.includes(vote)) {
       return NextResponse.json(
         { error: "Invalid vote value" },
         { status: 400 }
@@ -43,9 +47,10 @@ export async function POST(
       );
     }
 
-    // Обновляем голос участника
+    // Обновляем голос и статус участника
     room.participants[userId].vote = vote;
-    room.participants[userId].votedAt = Date.now();
+    room.participants[userId].votedAt = vote !== null ? Date.now() : null;
+    room.participants[userId].status = status;
     room.lastActivity = Date.now();
 
     // Сохраняем обновленную комнату

@@ -80,10 +80,18 @@ export function ParticipantList({ participants, revealed, creatorId, children }:
                     {participant.vote}
                   </div>
                 ) : hasVoted ? (
-                  // Большая яркая галочка если проголосовал но результаты скрыты
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20">
-                    <Check className="h-7 w-7 text-green-600 dark:text-green-400 stroke-[3]" />
-                  </div>
+                  // Различаем статус "thinking" vs "voted"
+                  participant.status === 'thinking' ? (
+                    // Иконка песочных часов для черновой оценки
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20" title="Thinking...">
+                      <span className="text-2xl">⏳</span>
+                    </div>
+                  ) : (
+                    // Большая яркая галочка для финального голоса (по умолчанию если статус не указан)
+                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/20" title="Voted">
+                      <Check className="h-7 w-7 text-green-600 dark:text-green-400 stroke-[3]" />
+                    </div>
+                  )
                 ) : (
                   // Пустое место если не проголосовал
                   <div className="w-10 h-10" />

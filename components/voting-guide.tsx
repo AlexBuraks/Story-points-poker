@@ -48,7 +48,7 @@ const AI_MODE_SP_MAPPING: Record<string, string> = {
 };
 
 interface VotingGuideProps {
-  onVote?: (vote: string | null) => void; // Supports null for vote deselection
+  onVote?: (vote: string | null, status?: 'voted' | 'thinking') => void; // Supports null for vote deselection, status for thinking vs voted
   resetTrigger?: number; // Incremented to trigger reset of selections
 }
 
@@ -104,11 +104,12 @@ export function VotingGuide({ onVote, resetTrigger }: VotingGuideProps) {
   }, [suggestedSpIndex, isAiMode]);
 
   // Auto-vote when suggested value changes (including null for deselection)
+  // IMPORTANT: always sends status='thinking' to indicate draft estimation
   useEffect(() => {
     if (suggestedSpValue !== lastVotedValueRef.current && onVote) {
       // Skip only the very first render (undefined = not initialized)
       if (lastVotedValueRef.current !== undefined) {
-        onVote(suggestedSpValue);
+        onVote(suggestedSpValue, 'thinking');
       }
       lastVotedValueRef.current = suggestedSpValue;
     }
@@ -236,11 +237,25 @@ export function VotingGuide({ onVote, resetTrigger }: VotingGuideProps) {
             </table>
           </div>
 
-          <div className="mt-4 flex justify-center items-center text-sm text-muted-foreground p-2">
+          <div className="mt-4 flex flex-col items-center gap-3 text-sm text-muted-foreground p-2">
             {suggestedSpIndex !== -1 && (
-              <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-6 py-3 rounded-md font-bold text-lg border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
-                Your score: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
-              </div>
+              <>
+                <div className="bg-green-500/10 text-green-600 dark:text-green-400 px-6 py-3 rounded-md font-bold text-lg border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
+                  Your score: {getSpValue(GUIDE_DATA[suggestedSpIndex].sp)} SP
+                </div>
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onVote) {
+                      onVote(suggestedSpValue, 'voted');
+                    }
+                  }}
+                  size="lg"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md"
+                >
+                  Confirm
+                </Button>
+              </>
             )}
           </div>
         </CardContent>

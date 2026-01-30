@@ -4,6 +4,7 @@ export interface Participant {
   vote: string | null;
   votedAt: number | null;
   isCreator: boolean;
+  status?: 'voted' | 'thinking'; // Статус голосования: voted = окончательный, thinking = черновик
 }
 
 // Структура комнаты в Redis

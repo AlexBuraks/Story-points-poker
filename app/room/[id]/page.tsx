@@ -142,7 +142,7 @@ export default function RoomPage({ params }: RoomPageProps) {
   };
 
   // Голосование с Optimistic UI (supports null for vote deselection)
-  const handleVote = useCallback(async (vote: VoteValue | null, fromManualClick = false) => {
+  const handleVote = useCallback(async (vote: VoteValue | null, status: 'voted' | 'thinking' = 'voted', fromManualClick = false) => {
     if (!userId) return;
 
     // Сохраняем предыдущее значение для возможного отката
@@ -161,7 +161,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       const response = await fetch(`/api/room/${roomId}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, vote }),
+        body: JSON.stringify({ userId, vote, status }),
       });
 
       if (!response.ok) {
@@ -391,9 +391,9 @@ export default function RoomPage({ params }: RoomPageProps) {
                   onClick={() => {
                     // Toggle: if already selected, deselect (vote null)
                     if (currentVote === value) {
-                      handleVote(null, true);
+                      handleVote(null, 'voted', true);
                     } else {
-                      handleVote(value, true);
+                      handleVote(value, 'voted', true);
                     }
                   }}
                 />
@@ -413,9 +413,9 @@ export default function RoomPage({ params }: RoomPageProps) {
                   onClick={() => {
                     // Toggle: if already selected, deselect (vote null)
                     if (currentVote === value) {
-                      handleVote(null, true);
+                      handleVote(null, 'voted', true);
                     } else {
-                      handleVote(value, true);
+                      handleVote(value, 'voted', true);
                     }
                   }}
                 />
@@ -425,7 +425,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
           {/* Подсказка по системе голосования */}
           <VotingGuide
-            onVote={(vote) => handleVote(vote as VoteValue, false)}
+            onVote={(vote, status = 'thinking') => handleVote(vote as VoteValue, status, false)}
             resetTrigger={guideResetKey}
           />
         </div>
