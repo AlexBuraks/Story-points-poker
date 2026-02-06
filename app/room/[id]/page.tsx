@@ -64,7 +64,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         }
 
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as Room;
 
           // Если только что нажали "Delete estimates", игнорим старые данные до тех пор,
           // пока сервер не подтвердит сброс (или пока не истечет таймаут).
