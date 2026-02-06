@@ -203,10 +203,15 @@ export default function RoomPage({ params }: RoomPageProps) {
       const response = await fetch(`/api/room/${roomId}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, vote, status }),
+        body: JSON.stringify({ vote, status }),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("Session expired. Please rejoin the room.");
+          setUserId(null);
+          return;
+        }
         // Откатываем изменения при ошибке
         setOptimisticVote(previousVote);
         setOptimisticStatus(previousVote === null ? null : 'voted');
@@ -246,10 +251,15 @@ export default function RoomPage({ params }: RoomPageProps) {
       const response = await fetch(`/api/room/${roomId}/reveal`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, revealed: !previousRevealed }),
+        body: JSON.stringify({ revealed: !previousRevealed }),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("Session expired. Please rejoin the room.");
+          setUserId(null);
+          return;
+        }
         // Откатываем изменения при ошибке
         setRoom(prev => prev ? { ...prev, revealed: previousRevealed } : null);
         setError("Failed to toggle reveal. Please try again.");
@@ -303,10 +313,15 @@ export default function RoomPage({ params }: RoomPageProps) {
       const response = await fetch(`/api/room/${roomId}/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setError("Session expired. Please rejoin the room.");
+          setUserId(null);
+          return;
+        }
         // Откатываем изменения при ошибке
         setRoom(previousRoom);
         setOptimisticVote(previousOptimisticVote);

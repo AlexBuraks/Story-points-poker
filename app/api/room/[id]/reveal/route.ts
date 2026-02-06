@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getRoom, saveRoom } from "@/lib/redis";
 
 // POST /api/room/[id]/reveal - Показать/скрыть результаты (только модератор)
@@ -9,12 +10,16 @@ export async function POST(
   try {
     const { id: roomId } = await params;
     const body = await request.json();
-    const { userId, revealed } = body;
+    const { revealed } = body;
 
-    if (!userId || typeof userId !== "string") {
+    const cookieStore = cookies();
+    const userId = cookieStore.get(`sp_uid_${roomId}`)?.value;
+    const authToken = cookieStore.get(`sp_token_${roomId}`)?.value;
+
+    if (!userId || !authToken) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Not authenticated" },
+        { status: 401 }
       );
     }
 
@@ -35,6 +40,14 @@ export async function POST(
     }
 
     // Проверяем что пользователь - создатель комнаты
+    const participant = room.participants[userId];
+    if (!participant || !participant.authToken || participant.authToken !== authToken) {
+      return NextResponse.json(
+        { error: "Invalid session" },
+        { status: 403 }
+      );
+    }
+
     if (room.creatorId !== userId) {
       return NextResponse.json(
         { error: "Only room creator can reveal results" },

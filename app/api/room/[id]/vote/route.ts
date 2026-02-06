@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getRoom, saveRoom } from "@/lib/redis";
 import { VOTE_VALUES } from "@/lib/types";
 
@@ -10,15 +11,19 @@ export async function POST(
   try {
     const { id: roomId } = await params;
     const body = await request.json();
-    const { userId, vote, status: rawStatus } = body;
+    const { vote, status: rawStatus } = body;
 
     // Нормализуем статус: если не передан или некорректный, используем 'voted'
     const status = (rawStatus === 'voted' || rawStatus === 'thinking') ? rawStatus : 'voted';
 
-    if (!userId || typeof userId !== "string") {
+    const cookieStore = cookies();
+    const userId = cookieStore.get(`sp_uid_${roomId}`)?.value;
+    const authToken = cookieStore.get(`sp_token_${roomId}`)?.value;
+
+    if (!userId || !authToken) {
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Not authenticated" },
+        { status: 401 }
       );
     }
 
@@ -40,17 +45,25 @@ export async function POST(
     }
 
     // Проверяем что пользователь в комнате
-    if (!room.participants[userId]) {
+    const participant = room.participants[userId];
+    if (!participant) {
       return NextResponse.json(
         { error: "User not in room" },
         { status: 403 }
       );
     }
 
+    if (!participant.authToken || participant.authToken !== authToken) {
+      return NextResponse.json(
+        { error: "Invalid session" },
+        { status: 403 }
+      );
+    }
+
     // Обновляем голос и статус участника
-    room.participants[userId].vote = vote;
-    room.participants[userId].votedAt = vote !== null ? Date.now() : null;
-    room.participants[userId].status = status;
+    participant.vote = vote;
+    participant.votedAt = vote !== null ? Date.now() : null;
+    participant.status = status;
     room.lastActivity = Date.now();
 
     // Сохраняем обновленную комнату

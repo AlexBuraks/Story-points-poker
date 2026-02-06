@@ -1,7 +1,7 @@
 import { kv } from "@vercel/kv";
 import { Room } from "./types";
 
-const ROOM_TTL = 60 * 60 * 3; // 3 часа в секундах
+export const ROOM_TTL = 60 * 60 * 3; // 3 часа в секундах
 
 // In-memory хранилище для локальной разработки без Redis
 const inMemoryStore: Map<string, Room> = new Map();
@@ -22,6 +22,11 @@ export function generateRoomId(): string {
 // Генерация уникального ID для пользователя
 export function generateUserId(): string {
   return Math.random().toString(36).substring(2, 15);
+}
+
+// Генерация секретного токена для аутентификации участника
+export function generateAuthToken(): string {
+  return Math.random().toString(36).substring(2, 18);
 }
 
 // Получить комнату из Redis или in-memory

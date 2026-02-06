@@ -25,7 +25,18 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(room, { status: 200 });
+    // Убираем секретные токены перед отдачей в клиент
+    const safeParticipants = Object.fromEntries(
+      Object.entries(room.participants).map(([id, participant]) => {
+        const { authToken, ...safeParticipant } = participant;
+        return [id, safeParticipant];
+      })
+    );
+
+    return NextResponse.json(
+      { ...room, participants: safeParticipants },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error getting room:", error);
     return NextResponse.json(

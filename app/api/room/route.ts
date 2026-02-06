@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateRoomId, generateUserId, saveRoom } from "@/lib/redis";
+import { generateRoomId, generateUserId, generateAuthToken, saveRoom, ROOM_TTL } from "@/lib/redis";
 import { Room } from "@/lib/types";
 
 // POST /api/room - Создание новой комнаты
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     // Генерируем уникальные ID
     const roomId = generateRoomId();
     const userId = generateUserId();
+    const authToken = generateAuthToken();
     const now = Date.now();
 
     // Создаем комнату
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
           vote: null,
           votedAt: null,
           isCreator: true,
+          authToken,
         },
       },
     };
@@ -47,7 +49,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ roomId, userId }, { status: 201 });
+    const response = NextResponse.json({ roomId, userId }, { status: 201 });
+
+    // Сохраняем сессию участника в HttpOnly cookie
+    response.cookies.set(`sp_uid_${roomId}`, userId, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: ROOM_TTL,
+    });
+    response.cookies.set(`sp_token_${roomId}`, authToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: ROOM_TTL,
+    });
+
+    return response;
   } catch (error) {
     console.error("Error creating room:", error);
     return NextResponse.json(

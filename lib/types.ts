@@ -5,6 +5,7 @@ export interface Participant {
   votedAt: number | null;
   isCreator: boolean;
   status?: 'voted' | 'thinking'; // Статус голосования: voted = окончательный, thinking = черновик
+  authToken?: string; // Секретный токен для серверной аутентификации
 }
 
 // Структура комнаты в Redis
