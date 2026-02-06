@@ -38,6 +38,10 @@ export default function RoomPage({ params }: RoomPageProps) {
   // Track previous vote to detect when it changes to null (new round)
   const previousVoteRef = useRef<VoteValue | string | null | undefined>(undefined);
 
+  // Guard to avoid stale polling overriding optimistic reset
+  const pendingResetRef = useRef(false);
+  const resetGuardUntilRef = useRef<number | null>(null);
+
   // Получение userId из localStorage при монтировании
   useEffect(() => {
     const storedUserId = localStorage.getItem(`user_${roomId}`);
@@ -61,6 +65,28 @@ export default function RoomPage({ params }: RoomPageProps) {
 
         if (response.ok) {
           const data = await response.json();
+
+          // Если только что нажали "Delete estimates", игнорим старые данные до тех пор,
+          // пока сервер не подтвердит сброс (или пока не истечет таймаут).
+          if (pendingResetRef.current) {
+            const now = Date.now();
+            const guardUntil = resetGuardUntilRef.current;
+            if (guardUntil && now > guardUntil) {
+              pendingResetRef.current = false;
+              resetGuardUntilRef.current = null;
+            } else {
+              const allVotesNull = Object.values(data.participants).every(p => p.vote === null);
+              const isResetState = data.revealed === false && allVotesNull;
+
+              if (!isResetState) {
+                return; // держим оптимистичный сброс, не перетираем UI старым состоянием
+              }
+
+              pendingResetRef.current = false;
+              resetGuardUntilRef.current = null;
+            }
+          }
+
           setRoom(data);
 
           // Синхронизируем optimistic vote с сервером
@@ -242,6 +268,10 @@ export default function RoomPage({ params }: RoomPageProps) {
   const handleReset = async () => {
     if (!userId || !room) return;
 
+    // Блокируем перезапись UI старыми данными из polling на время сброса
+    pendingResetRef.current = true;
+    resetGuardUntilRef.current = Date.now() + 5000;
+
     // Сохраняем предыдущее состояние для возможного отката
     const previousRoom = { ...room };
     const previousOptimisticVote = optimisticVote;
@@ -275,6 +305,9 @@ export default function RoomPage({ params }: RoomPageProps) {
         setOptimisticVote(previousOptimisticVote);
         setError("Failed to reset votes. Please try again.");
 
+        pendingResetRef.current = false;
+        resetGuardUntilRef.current = null;
+
         // Автоматически скрываем ошибку через 3 секунды
         setTimeout(() => setError(null), 3000);
       }
@@ -284,6 +317,9 @@ export default function RoomPage({ params }: RoomPageProps) {
       setRoom(previousRoom);
       setOptimisticVote(previousOptimisticVote);
       setError("Network error. Please check your connection.");
+
+      pendingResetRef.current = false;
+      resetGuardUntilRef.current = null;
 
       // Автоматически скрываем ошибку через 3 секунды
       setTimeout(() => setError(null), 3000);
