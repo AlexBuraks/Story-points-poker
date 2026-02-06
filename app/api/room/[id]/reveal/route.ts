@@ -12,7 +12,7 @@ export async function POST(
     const body = await request.json();
     const { revealed } = body;
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get(`sp_uid_${roomId}`)?.value;
     const authToken = cookieStore.get(`sp_token_${roomId}`)?.value;
 

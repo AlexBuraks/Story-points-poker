@@ -16,7 +16,7 @@ export async function POST(
     // Нормализуем статус: если не передан или некорректный, используем 'voted'
     const status = (rawStatus === 'voted' || rawStatus === 'thinking') ? rawStatus : 'voted';
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get(`sp_uid_${roomId}`)?.value;
     const authToken = cookieStore.get(`sp_token_${roomId}`)?.value;
 
