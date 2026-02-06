@@ -19,6 +19,45 @@ const EMOJIS = ['🎮', '🚀', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', 
 export function ParticipantList({ participants, revealed, creatorId, children }: ParticipantListProps) {
   const participantEntries = Object.entries(participants);
 
+  const sortedEntries = useMemo(() => {
+    if (!revealed) return participantEntries;
+
+    // Бизнес-логика сортировки после reveal:
+    // 1) числовые оценки по возрастанию
+    // 2) нечисловые: сначала "?", потом "☕️"
+    // 3) не голосовали в самом конце
+    const numericOrder = ["0.5", "1", "2", "3", "5", "8", "13", "21"];
+    const specialOrder = ["?", "☕️"];
+
+    const originalIndex = new Map(participantEntries.map((entry, idx) => [entry[0], idx]));
+
+    const getGroupRank = (vote: string | null) => {
+      if (vote === null) return 2; // not voted
+      if (numericOrder.includes(vote)) return 0; // numeric
+      return 1; // special
+    };
+
+    const getValueRank = (vote: string | null) => {
+      if (vote === null) return Number.MAX_SAFE_INTEGER;
+      if (numericOrder.includes(vote)) return numericOrder.indexOf(vote);
+      if (specialOrder.includes(vote)) return specialOrder.indexOf(vote);
+      return Number.MAX_SAFE_INTEGER - 1; // неизвестные значения в конце своей группы
+    };
+
+    return [...participantEntries].sort((a, b) => {
+      const voteA = a[1].vote;
+      const voteB = b[1].vote;
+
+      const groupDiff = getGroupRank(voteA) - getGroupRank(voteB);
+      if (groupDiff !== 0) return groupDiff;
+
+      const valueDiff = getValueRank(voteA) - getValueRank(voteB);
+      if (valueDiff !== 0) return valueDiff;
+
+      return (originalIndex.get(a[0]) ?? 0) - (originalIndex.get(b[0]) ?? 0);
+    });
+  }, [participantEntries, revealed]);
+
   // Генерируем стабильные эмоджи для каждого userId
   const userEmojis = useMemo(() => {
     const emojis: Record<string, string> = {};
@@ -52,7 +91,7 @@ export function ParticipantList({ participants, revealed, creatorId, children }:
         </div>
         
         {/* Участники */}
-        {participantEntries.map(([userId, participant]) => {
+        {sortedEntries.map(([userId, participant]) => {
           const hasVoted = participant.vote !== null;
 
           return (
