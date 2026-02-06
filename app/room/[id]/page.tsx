@@ -31,6 +31,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
   // Optimistic UI state for voting
   const [optimisticVote, setOptimisticVote] = useState<VoteValue | null>(null);
+  const [optimisticStatus, setOptimisticStatus] = useState<'voted' | 'thinking' | null>(null);
 
   // Reset trigger for VotingGuide (incremented to clear selections)
   const [guideResetKey, setGuideResetKey] = useState(0);
@@ -97,6 +98,7 @@ export default function RoomPage({ params }: RoomPageProps) {
           // Убрали serverVote === null, чтобы избежать race condition при голосовании.
           if (optimisticVote !== null && serverVote === optimisticVote) {
             setOptimisticVote(null);
+            setOptimisticStatus(null);
           }
 
           setError(null);
@@ -135,6 +137,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     if (isExplicitReset || isNewRoundOnServer) {
       setOptimisticVote(null); // Force clear optimistic state on reset
+      setOptimisticStatus(null);
       setGuideResetKey(prev => prev + 1);
     }
 
@@ -188,6 +191,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     // НЕМЕДЛЕННО обновляем UI (Optimistic Update)
     setOptimisticVote(vote);
+    setOptimisticStatus(vote === null ? null : status);
 
     // If this was a manual click on PokerCard, reset the guide selections
     if (fromManualClick) {
@@ -205,6 +209,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       if (!response.ok) {
         // Откатываем изменения при ошибке
         setOptimisticVote(previousVote);
+        setOptimisticStatus(previousVote === null ? null : 'voted');
         setError("Failed to vote. Please try again.");
 
         // Автоматически скрываем ошибку через 3 секунды
@@ -217,6 +222,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       console.error("Error voting:", error);
       // Откатываем изменения при ошибке сети
       setOptimisticVote(previousVote);
+      setOptimisticStatus(previousVote === null ? null : 'voted');
       setError("Network error. Please check your connection.");
 
       // Автоматически скрываем ошибку через 3 секунды
@@ -288,6 +294,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     // Immediately reset optimistic vote and guide (don't wait for polling)
     setOptimisticVote(null);
+    setOptimisticStatus(null);
     setGuideResetKey(prev => prev + 1);
 
     setIsLoading(true);
@@ -483,6 +490,9 @@ export default function RoomPage({ params }: RoomPageProps) {
           participants={room.participants}
           revealed={room.revealed}
           creatorId={room.creatorId}
+          currentUserId={userId}
+          optimisticVote={optimisticVote}
+          optimisticStatus={optimisticStatus}
         >
           {/* Контролы для модератора */}
           {isCreator && (

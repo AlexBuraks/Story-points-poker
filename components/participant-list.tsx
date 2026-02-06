@@ -9,6 +9,9 @@ interface ParticipantListProps {
   participants: Record<string, Participant>;
   revealed: boolean;
   creatorId: string;
+  currentUserId?: string | null;
+  optimisticVote?: string | null;
+  optimisticStatus?: 'voted' | 'thinking' | null;
   children?: React.ReactNode; // Для кнопок контролов
 }
 
@@ -16,7 +19,15 @@ interface ParticipantListProps {
 const EMOJIS = ['🎮', '🚀', '🎨', '🎭', '🎪', '🎯', '🎲', '🎸', '🎺', '🎻', '🎹', '🥁', '🎤', '🎧', '🎬', '🎼', '🌟', '⭐', '✨', '💫', '🔥', '💎', '🏆', '🎖️', '🏅', '🥇', '🥈', '🥉'];
 
 // Компонент списка участников
-export function ParticipantList({ participants, revealed, creatorId, children }: ParticipantListProps) {
+export function ParticipantList({
+  participants,
+  revealed,
+  creatorId,
+  currentUserId,
+  optimisticVote,
+  optimisticStatus,
+  children,
+}: ParticipantListProps) {
   const participantEntries = Object.entries(participants);
 
   const sortedEntries = useMemo(() => {
@@ -92,7 +103,11 @@ export function ParticipantList({ participants, revealed, creatorId, children }:
         
         {/* Участники */}
         {sortedEntries.map(([userId, participant]) => {
-          const hasVoted = participant.vote !== null;
+          // Оптимистично подменяем данные только для текущего пользователя
+          const isCurrentUser = currentUserId && userId === currentUserId;
+          const effectiveVote = isCurrentUser && optimisticVote !== null ? optimisticVote : participant.vote;
+          const effectiveStatus = isCurrentUser && optimisticStatus ? optimisticStatus : participant.status;
+          const hasVoted = effectiveVote !== null;
 
           return (
             <div 
@@ -116,11 +131,11 @@ export function ParticipantList({ participants, revealed, creatorId, children }:
                 {revealed && hasVoted ? (
                   // Показываем результат после reveal
                   <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground font-bold text-xl">
-                    {participant.vote}
+                    {effectiveVote}
                   </div>
                 ) : hasVoted ? (
                   // Различаем статус "thinking" vs "voted"
-                  participant.status === 'thinking' ? (
+                  effectiveStatus === 'thinking' ? (
                     // Иконка песочных часов для черновой оценки
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/20" title="Thinking...">
                       <span className="text-2xl">⏳</span>
